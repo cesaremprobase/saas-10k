@@ -25,6 +25,9 @@ export function PasteWhatsAppModal({ isOpen, onClose }: { isOpen: boolean; onClo
     const validOrders = parsedResults
       .filter((p) => p.isValid)
       .map((p) => ({
+        courier: p.courier || 'SHALOM',
+        deliveryType: p.deliveryType || 'AGENCIA',
+        deliveryAddress: p.deliveryAddress || '',
         recipientName: p.recipientName,
         recipientDocType: p.recipientDocType,
         recipientDocNumber: p.recipientDocNumber,

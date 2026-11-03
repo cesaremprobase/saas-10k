@@ -36,6 +36,84 @@ export interface Database {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          id: string
+          order_number: string
+          courier: string
+          delivery_type: string
+          delivery_address: string | null
+          delivery_district: string | null
+          delivery_reference: string | null
+          recipient_name: string
+          recipient_doc_type: string
+          recipient_doc_number: string
+          recipient_phone: string
+          destination_department: string
+          destination_province: string
+          destination_agency: string
+          package_content: string
+          package_quantity: number
+          payment_condition: string
+          notes: string | null
+          operator_name: string | null
+          seller_phone: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          order_number: string
+          courier?: string
+          delivery_type?: string
+          delivery_address?: string | null
+          delivery_district?: string | null
+          delivery_reference?: string | null
+          recipient_name: string
+          recipient_doc_type?: string
+          recipient_doc_number: string
+          recipient_phone: string
+          destination_department: string
+          destination_province: string
+          destination_agency: string
+          package_content?: string
+          package_quantity?: number
+          payment_condition?: string
+          notes?: string | null
+          operator_name?: string | null
+          seller_phone?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          order_number?: string
+          courier?: string
+          delivery_type?: string
+          delivery_address?: string | null
+          delivery_district?: string | null
+          delivery_reference?: string | null
+          recipient_name?: string
+          recipient_doc_type?: string
+          recipient_doc_number?: string
+          recipient_phone?: string
+          destination_department?: string
+          destination_province?: string
+          destination_agency?: string
+          package_content?: string
+          package_quantity?: number
+          payment_condition?: string
+          notes?: string | null
+          operator_name?: string | null
+          seller_phone?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

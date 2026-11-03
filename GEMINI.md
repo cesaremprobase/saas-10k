@@ -212,6 +212,10 @@ Liquid Glass, Gradient Mesh, Neumorphism, Bento Grid, Neobrutalism
 - **Error**: Evaluar `typeof window !== 'undefined' ? window.location.origin + path : path` en el JSX genera un mismatch de hidratación en React porque en el servidor el href es relativo (`/form?...`) y en el cliente es absoluto (`http://localhost:3000/form?...`).
 - **Fix**: Usar rutas relativas directamente en el `href` de las etiquetas `<a>` (el navegador las resuelve de forma nativa), y calcular `window.location.origin` únicamente dentro de los manejadores de eventos (`onClick`) al copiar al portapapeles.
 
+### 2026-11-03: Mapeo estricto de tipos en importadores masivos (addBulkOrders)
+- **Error**: Vercel falla en `npm run build` con `Type error: Argument of type ... is missing the following properties: courier, deliveryType` en `PasteWhatsAppModal.tsx`.
+- **Fix**: Mapear explícitamente `courier: p.courier || 'SHALOM'` y `deliveryType: p.deliveryType || 'AGENCIA'` en el transformador de pegado de WhatsApp para satisfacer estrictamente la interfaz `OrderItem`.
+
 ---
 
 *V5: Agent-First & Multi-Cloud. El usuario habla, tu construyes y despliegas donde sea.*
