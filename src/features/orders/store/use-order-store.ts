@@ -1,7 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { OrderItem, SenderProfile } from '../types'
+import {
+  OrderItem,
+  SenderProfile,
+  CourierType,
+  DeliveryType,
+  DocumentType,
+  PaymentCondition,
+  OrderStatus,
+} from '../types'
 import { createClient } from '@/lib/supabase/client'
 
 function isSupabaseConfigured(): boolean {
@@ -85,29 +93,29 @@ export function useOrderStore() {
         .then(({ data, error }) => {
           if (!error && data && data.length > 0) {
             memoryOrders = data.map((d: any) => ({
-              id: d.id,
-              orderNumber: d.order_number,
-              courier: d.courier,
-              deliveryType: d.delivery_type,
-              deliveryAddress: d.delivery_address || '',
-              deliveryDistrict: d.delivery_district || '',
-              deliveryReference: d.delivery_reference || '',
-              recipientName: d.recipient_name,
-              recipientDocType: d.recipient_doc_type,
-              recipientDocNumber: d.recipient_doc_number,
-              recipientPhone: d.recipient_phone,
-              destinationDepartment: d.destination_department,
-              destinationProvince: d.destination_province,
-              destinationAgency: d.destination_agency,
-              packageContent: d.package_content,
-              packageQuantity: d.package_quantity,
-              paymentCondition: d.payment_condition,
-              notes: d.notes || '',
-              operatorName: d.operator_name || '',
-              sellerPhone: d.seller_phone || '',
-              status: d.status,
-              createdAt: d.created_at,
-              updatedAt: d.updated_at,
+              id: String(d.id),
+              orderNumber: String(d.order_number),
+              courier: (d.courier || 'SHALOM') as CourierType,
+              deliveryType: (d.delivery_type || 'AGENCIA') as DeliveryType,
+              deliveryAddress: String(d.delivery_address || ''),
+              deliveryDistrict: String(d.delivery_district || ''),
+              deliveryReference: String(d.delivery_reference || ''),
+              recipientName: String(d.recipient_name),
+              recipientDocType: (d.recipient_doc_type || 'DNI') as DocumentType,
+              recipientDocNumber: String(d.recipient_doc_number),
+              recipientPhone: String(d.recipient_phone),
+              destinationDepartment: String(d.destination_department),
+              destinationProvince: String(d.destination_province),
+              destinationAgency: String(d.destination_agency),
+              packageContent: String(d.package_content),
+              packageQuantity: Number(d.package_quantity) || 1,
+              paymentCondition: (d.payment_condition || 'PAGO_EN_DESTINO') as PaymentCondition,
+              notes: String(d.notes || ''),
+              operatorName: String(d.operator_name || ''),
+              sellerPhone: String(d.seller_phone || ''),
+              status: (d.status || 'validated') as OrderStatus,
+              createdAt: String(d.created_at || new Date().toISOString()),
+              updatedAt: String(d.updated_at || new Date().toISOString()),
             }))
             saveToLocalStorage()
             notify()
