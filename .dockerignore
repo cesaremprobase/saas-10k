@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.env*.local
+*.log
+build.log
+build_cmd.log
+crear-proyecto.bat
+crear-proyecto.ps1
+.agents
+.claude
