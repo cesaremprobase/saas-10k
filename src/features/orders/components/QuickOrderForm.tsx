@@ -6,9 +6,11 @@ import { useAgencies } from '../../shalom-agencies/hooks/use-agencies'
 import { PERU_DEPARTMENTS } from '../../shalom-agencies/services/agency-search'
 import { DocumentType, PaymentCondition, CourierType, DeliveryType } from '../types'
 import { orderItemSchema } from '../schemas/order.schema'
+import { useAuthStore } from '@/features/auth/store/use-auth-store'
 
 export function QuickOrderForm({ onSuccess }: { onSuccess?: () => void }) {
   const { addOrder } = useOrderStore()
+  const { currentUser } = useAuthStore()
 
   const [courier, setCourier] = useState<CourierType>('SHALOM')
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('AGENCIA')
@@ -94,6 +96,10 @@ export function QuickOrderForm({ onSuccess }: { onSuccess?: () => void }) {
       packageQuantity: Number(packageQuantity),
       paymentCondition,
       notes,
+      operatorName: currentUser?.name || undefined,
+      sellerPhone: currentUser?.phone || undefined,
+      createdByEmail: currentUser?.email || undefined,
+      createdById: currentUser?.id || undefined,
     }
 
     const validation = orderItemSchema.safeParse(payload)

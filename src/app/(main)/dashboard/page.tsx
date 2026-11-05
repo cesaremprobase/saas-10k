@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { useOrderStore } from '@/features/orders/store/use-order-store'
+import { useOrderStore, isOrderOwnedByUser } from '@/features/orders/store/use-order-store'
 import { QuickOrderForm } from '@/features/orders/components/QuickOrderForm'
 import { PasteWhatsAppModal } from '@/features/orders/components/PasteWhatsAppModal'
 import { OrderTable } from '@/features/orders/components/OrderTable'
@@ -13,6 +13,7 @@ import { OrderItem } from '@/features/orders/types'
 import { useAuthStore } from '@/features/auth/store/use-auth-store'
 import { TeamManagementModal } from '@/features/auth/components/TeamManagementModal'
 import { UserPhoneModal } from '@/features/auth/components/UserPhoneModal'
+import { AdminOperatorMetrics } from '@/features/orders/components/AdminOperatorMetrics'
 
 export default function DashboardPage() {
   const { orders, sender, markAllAsLabeled, markAllAsExported } = useOrderStore()
@@ -26,6 +27,20 @@ export default function DashboardPage() {
   const [selectedOrderForPrint, setSelectedOrderForPrint] = useState<OrderItem | null>(null)
   const [activeTab, setActiveTab] = useState<'all' | 'new_order'>('all')
   const [copiedLink, setCopiedLink] = useState(false)
+  const [adminOperatorFilter, setAdminOperatorFilter] = useState<string>('ALL')
+
+  const isAdmin = currentUser?.role === 'ADMIN'
+
+  // Regla de Visibilidad:
+  // - OPERADOR: Únicamente ve los pedidos creados por él o recibidos en su enlace personal.
+  // - ADMINISTRADOR: Ve la totalidad de pedidos, con capacidad de filtrar por operador.
+  const displayedOrders = isAdmin
+    ? adminOperatorFilter === 'ALL'
+      ? orders
+      : orders.filter(
+        (o) => (o.operatorName || 'Sin Asignar').toLowerCase() === adminOperatorFilter.toLowerCase()
+      )
+    : orders.filter((o) => isOrderOwnedByUser(o, currentUser))
 
   const activePhone = currentUser?.phone || sender.phone || '900475318'
   const activeOperator = currentUser?.name || ''
@@ -41,22 +56,22 @@ export default function DashboardPage() {
     }
   }
 
-  const totalBultos = orders.reduce((acc, o) => acc + o.packageQuantity, 0)
-  const fleteDestinoCount = orders.filter((o) => o.paymentCondition === 'PAGO_EN_DESTINO').length
-  const fletePagadoCount = orders.filter((o) => o.paymentCondition === 'PAGADO').length
+  const totalBultos = displayedOrders.reduce((acc, o) => acc + o.packageQuantity, 0)
+  const fleteDestinoCount = displayedOrders.filter((o) => o.paymentCondition === 'PAGO_EN_DESTINO').length
+  const fletePagadoCount = displayedOrders.filter((o) => o.paymentCondition === 'PAGADO').length
 
   const handleExportExcel = () => {
-    if (orders.length === 0) {
-      alert('Agrega al menos un pedido antes de exportar el Excel de Shalom')
+    if (displayedOrders.length === 0) {
+      alert('No hay pedidos disponibles para exportar el Excel de Shalom')
       return
     }
-    exportShalomExcel(orders, sender)
+    exportShalomExcel(displayedOrders, sender)
     markAllAsExported()
   }
 
   const handlePrintAll = () => {
-    if (orders.length === 0) {
-      alert('Agrega al menos un pedido antes de generar rótulos')
+    if (displayedOrders.length === 0) {
+      alert('No hay pedidos disponibles para generar rótulos')
       return
     }
     setSelectedOrderForPrint(null)
@@ -115,11 +130,10 @@ export default function DashboardPage() {
             {/* Configurar / Cambiar Mi WhatsApp Personal */}
             <button
               onClick={() => setIsPhoneModalOpen(true)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-                currentUser?.phone
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${currentUser?.phone
                   ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
                   : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300 animate-pulse'
-              }`}
+                }`}
               title="Configurar el WhatsApp donde recibirás los pedidos de tus clientes"
             >
               <span>📲</span>
@@ -181,8 +195,14 @@ export default function DashboardPage() {
         {/* KPI / Stats Header */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <div className="p-4 rounded-xl border border-slate-800/80 bg-slate-900/50 backdrop-blur-sm">
-            <div className="text-[11px] font-medium text-slate-400">Total Envíos en Lote</div>
-            <div className="text-2xl font-black text-white mt-1">{orders.length}</div>
+            <div className="text-[11px] font-medium text-slate-400">
+              {isAdmin
+                ? adminOperatorFilter === 'ALL'
+                  ? 'Total Envíos en Lote'
+                  : `Envíos: ${adminOperatorFilter}`
+                : 'Mis Envíos en Lote'}
+            </div>
+            <div className="text-2xl font-black text-white mt-1">{displayedOrders.length}</div>
             <div className="text-[10px] text-slate-500 mt-0.5">{totalBultos} bulto(s) en total</div>
           </div>
 
@@ -204,6 +224,15 @@ export default function DashboardPage() {
             <div className="text-[10px] text-slate-500 mt-0.5">Carga masiva oficial</div>
           </div>
         </div>
+
+        {/* Panel de Métricas de Operadores (Exclusivo Administrador) */}
+        {isAdmin && (
+          <AdminOperatorMetrics
+            orders={orders}
+            selectedOperator={adminOperatorFilter}
+            onSelectOperator={setAdminOperatorFilter}
+          />
+        )}
 
         {/* Enlace para Compradores (Autoservicio) */}
         <div className="p-4 rounded-xl border border-indigo-500/30 bg-gradient-to-r from-indigo-950/40 via-slate-900/60 to-purple-950/30 backdrop-blur-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -292,7 +321,7 @@ export default function DashboardPage() {
           <div className="flex items-center space-x-2">
             <button
               onClick={handlePrintAll}
-              disabled={orders.length === 0}
+              disabled={displayedOrders.length === 0}
               className="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all flex items-center space-x-1.5"
             >
               <span>🏷️ Imprimir Rótulos (10x15)</span>
@@ -300,7 +329,7 @@ export default function DashboardPage() {
 
             <button
               onClick={handleExportExcel}
-              disabled={orders.length === 0}
+              disabled={displayedOrders.length === 0}
               className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-100 border border-slate-700 font-bold text-xs transition-all flex items-center space-x-1.5"
             >
               <span>📊 Excel Shalom</span>
@@ -324,15 +353,34 @@ export default function DashboardPage() {
           {/* Columna Derecha / Principal: Tabla de Lote */}
           <div className={activeTab === 'new_order' ? 'lg:col-span-2' : 'lg:col-span-3'}>
             <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
                 <div>
-                  <h3 className="font-bold text-white text-sm">Lote Activo de Despacho</h3>
+                  <h3 className="font-bold text-white text-sm">
+                    {isAdmin
+                      ? adminOperatorFilter === 'ALL'
+                        ? 'Lote Activo de Despacho (Todos los Operadores)'
+                        : `Lote de Pedidos: ${adminOperatorFilter}`
+                      : 'Mi Lote Activo de Despacho'}
+                  </h3>
                   <p className="text-[11px] text-slate-400">
                     Haz clic en cualquier fila para previsualizar su rótulo térmico individual.
                   </p>
                 </div>
+                {isAdmin && adminOperatorFilter !== 'ALL' && (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs px-2.5 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30">
+                      Filtrado: <strong>{adminOperatorFilter}</strong>
+                    </span>
+                    <button
+                      onClick={() => setAdminOperatorFilter('ALL')}
+                      className="text-xs px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+                    >
+                      ✕ Ver Todos
+                    </button>
+                  </div>
+                )}
               </div>
-              <OrderTable onSelectOrder={handleRowClick} />
+              <OrderTable orders={displayedOrders} onSelectOrder={handleRowClick} />
             </div>
           </div>
         </div>
@@ -360,7 +408,7 @@ export default function DashboardPage() {
       <LabelPrintModal
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
-        orders={selectedOrderForPrint ? [selectedOrderForPrint] : orders}
+        orders={selectedOrderForPrint ? [selectedOrderForPrint] : displayedOrders}
         sender={sender}
         onPrinted={() => markAllAsLabeled()}
       />

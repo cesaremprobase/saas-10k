@@ -35,6 +35,8 @@ export const orderItemSchema = z.object({
   notes: z.string().optional().default(''),
   operatorName: z.string().optional().default(''),
   sellerPhone: z.string().optional().default(''),
+  createdByEmail: z.string().optional().default(''),
+  createdById: z.string().optional().default(''),
 })
 
 export type OrderItemInput = z.infer<typeof orderItemSchema>

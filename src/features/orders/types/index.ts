@@ -45,6 +45,8 @@ export interface OrderItem {
   // Operador / Vendedor que originó el pedido
   operatorName?: string
   sellerPhone?: string
+  createdByEmail?: string
+  createdById?: string
   // Estado
   status: OrderStatus
   createdAt: string

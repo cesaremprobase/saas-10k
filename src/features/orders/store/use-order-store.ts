@@ -77,6 +77,39 @@ function loadFromLocalStorage() {
   }
 }
 
+// Helper para verificar si un pedido pertenece a un usuario (o si el usuario es ADMIN)
+export function isOrderOwnedByUser(
+  order: OrderItem,
+  user?: { role?: string; email?: string; phone?: string; name?: string } | null
+): boolean {
+  if (!user) return false
+  if (user.role === 'ADMIN') return true
+
+  const cleanUserPhone = user.phone ? user.phone.replace(/\D/g, '') : ''
+  const cleanSellerPhone = order.sellerPhone ? order.sellerPhone.replace(/\D/g, '') : ''
+  if (cleanUserPhone && cleanSellerPhone && cleanUserPhone === cleanSellerPhone) {
+    return true
+  }
+
+  if (
+    order.createdByEmail &&
+    user.email &&
+    order.createdByEmail.trim().toLowerCase() === user.email.trim().toLowerCase()
+  ) {
+    return true
+  }
+
+  if (
+    order.operatorName &&
+    user.name &&
+    order.operatorName.trim().toLowerCase() === user.name.trim().toLowerCase()
+  ) {
+    return true
+  }
+
+  return false
+}
+
 export function useOrderStore() {
   const [, setTick] = useState(0)
 
@@ -113,6 +146,8 @@ export function useOrderStore() {
               notes: String(d.notes || ''),
               operatorName: String(d.operator_name || ''),
               sellerPhone: String(d.seller_phone || ''),
+              createdByEmail: String(d.created_by_email || ''),
+              createdById: String(d.created_by_id || ''),
               status: (d.status || 'validated') as OrderStatus,
               createdAt: String(d.created_at || new Date().toISOString()),
               updatedAt: String(d.updated_at || new Date().toISOString()),
@@ -168,6 +203,8 @@ export function useOrderStore() {
         notes: newOrder.notes || null,
         operator_name: newOrder.operatorName || null,
         seller_phone: newOrder.sellerPhone || null,
+        created_by_email: newOrder.createdByEmail || null,
+        created_by_id: newOrder.createdById || null,
         status: newOrder.status,
       }).then(({ error }) => {
         if (error) console.error('Error insertando en Supabase:', error.message)
@@ -195,25 +232,61 @@ export function useOrderStore() {
     []
   )
 
-  const removeOrder = useCallback((id: string) => {
-    memoryOrders = memoryOrders.filter((o) => o.id !== id)
-    saveToLocalStorage()
-    notify()
-    if (isSupabaseConfigured()) {
-      const supabase = createClient()
-      supabase.from('orders').delete().eq('id', id).then(() => {})
-    }
-  }, [])
+  const removeOrder = useCallback(
+    (id: string, user?: { role?: string; email?: string; phone?: string; name?: string } | null) => {
+      const target = memoryOrders.find((o) => o.id === id)
+      if (!target) return
 
-  const clearAllOrders = useCallback(() => {
-    memoryOrders = []
-    saveToLocalStorage()
-    notify()
-    if (isSupabaseConfigured()) {
-      const supabase = createClient()
-      supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000').then(() => {})
-    }
-  }, [])
+      // Si se pasa usuario y no es ADMIN, verificar pertenencia
+      if (user && user.role !== 'ADMIN') {
+        const isOwner = isOrderOwnedByUser(target, user)
+        if (!isOwner) {
+          console.warn('Acceso denegado: No puedes eliminar pedidos de otros usuarios')
+          return false
+        }
+      }
+
+      memoryOrders = memoryOrders.filter((o) => o.id !== id)
+      saveToLocalStorage()
+      notify()
+      if (isSupabaseConfigured()) {
+        const supabase = createClient()
+        supabase.from('orders').delete().eq('id', id).then(() => { })
+      }
+      return true
+    },
+    []
+  )
+
+  const clearAllOrders = useCallback(
+    (user?: { role?: string; email?: string; phone?: string; name?: string } | null) => {
+      if (user && user.role !== 'ADMIN') {
+        // Los operadores únicamente vacían SUS propios pedidos
+        const toDelete = memoryOrders.filter((o) => isOrderOwnedByUser(o, user))
+        const idsToDelete = toDelete.map((o) => o.id)
+        if (idsToDelete.length === 0) return
+
+        memoryOrders = memoryOrders.filter((o) => !idsToDelete.includes(o.id))
+        saveToLocalStorage()
+        notify()
+        if (isSupabaseConfigured()) {
+          const supabase = createClient()
+          supabase.from('orders').delete().in('id', idsToDelete).then(() => { })
+        }
+        return
+      }
+
+      // Los administradores vacían todo el lote
+      memoryOrders = []
+      saveToLocalStorage()
+      notify()
+      if (isSupabaseConfigured()) {
+        const supabase = createClient()
+        supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000').then(() => { })
+      }
+    },
+    []
+  )
 
   const updateSender = useCallback((sender: SenderProfile) => {
     memorySender = sender

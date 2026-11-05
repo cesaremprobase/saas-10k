@@ -3,9 +3,11 @@
 import React, { useState } from 'react'
 import { parseMultipleWhatsAppMessages, ParsedRawOrder } from '../services/whatsapp-parser'
 import { useOrderStore } from '../store/use-order-store'
+import { useAuthStore } from '@/features/auth/store/use-auth-store'
 
 export function PasteWhatsAppModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { addBulkOrders } = useOrderStore()
+  const { currentUser } = useAuthStore()
   const [rawText, setRawText] = useState('')
   const [parsedResults, setParsedResults] = useState<ParsedRawOrder[]>([])
   const [analyzed, setAnalyzed] = useState(false)
@@ -39,6 +41,10 @@ export function PasteWhatsAppModal({ isOpen, onClose }: { isOpen: boolean; onClo
         packageQuantity: p.packageQuantity,
         paymentCondition: p.paymentCondition,
         notes: p.notes || '',
+        operatorName: currentUser?.name || undefined,
+        sellerPhone: currentUser?.phone || undefined,
+        createdByEmail: currentUser?.email || undefined,
+        createdById: currentUser?.id || undefined,
       }))
 
     if (validOrders.length > 0) {

@@ -25,6 +25,8 @@ create table if not exists public.orders (
   notes text,
   operator_name text,
   seller_phone text,
+  created_by_email text,
+  created_by_id text,
   status text not null default 'validated',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
