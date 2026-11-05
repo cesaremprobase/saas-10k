@@ -20,11 +20,17 @@ function isSupabaseConfigured(): boolean {
 const STORAGE_USERS_KEY = 'tikship_users'
 const STORAGE_CURRENT_USER_KEY = 'tikship_current_user'
 
+// Cuentas con privilegio de Administrador Global
+const ADMIN_EMAILS = [
+  'tritechcesar@gmail.com',
+  'admin@tikship.pe',
+]
+
 const DEFAULT_USERS: SystemUser[] = [
   {
     id: 'usr-admin-01',
-    name: 'Administrador Principal',
-    email: 'admin@tikship.pe',
+    name: 'Cesar (Admin)',
+    email: 'tritechcesar@gmail.com',
     phone: '900475318',
     role: 'ADMIN',
     active: true,
@@ -87,10 +93,22 @@ export function useAuthStore() {
       supabase.auth.getUser().then(({ data: { user } }) => {
         if (user && user.email) {
           const userEmail = user.email.toLowerCase()
-          const existing = memoryUsers.find((u) => u.email.toLowerCase() === userEmail)
-          if (existing) {
-            memoryCurrentUser = existing
+          const isAdmin = ADMIN_EMAILS.includes(userEmail)
+          const existingIndex = memoryUsers.findIndex((u) => u.email.toLowerCase() === userEmail)
+
+          if (existingIndex >= 0) {
+            const existing = memoryUsers[existingIndex]
+            const updated: SystemUser = {
+              ...existing,
+              name: user.user_metadata?.full_name || user.user_metadata?.name || existing.name,
+              avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture || existing.avatarUrl,
+              role: isAdmin ? 'ADMIN' : (existing.role || 'OPERATOR'),
+              phone: existing.phone || (isAdmin ? '900475318' : ''),
+            }
+            memoryUsers[existingIndex] = updated
+            memoryCurrentUser = updated
           } else {
+            // Usuario NUEVO: si no es el correo del dueño, es OPERADOR y su teléfono inicia vacío
             const newUser: SystemUser = {
               id: user.id,
               name:
@@ -98,8 +116,8 @@ export function useAuthStore() {
                 user.user_metadata?.name ||
                 user.email.split('@')[0],
               email: user.email,
-              phone: user.user_metadata?.phone || '900475318',
-              role: memoryUsers.length <= 1 ? 'ADMIN' : 'OPERATOR',
+              phone: isAdmin ? '900475318' : '',
+              role: isAdmin ? 'ADMIN' : 'OPERATOR',
               active: true,
               authProvider: 'google',
               avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
@@ -139,17 +157,17 @@ export function useAuthStore() {
       }
       return { error: undefined, isRedirecting: true }
     } else {
-      // Modo local/demo interactivo: inicia sesión como cuenta de Google
-      const googleEmail = 'usuario.google@gmail.com'
+      // Modo local/demo interactivo: crea usuario operador para simular
+      const googleEmail = 'operador.demo@gmail.com'
       const existing = memoryUsers.find((u) => u.email.toLowerCase() === googleEmail)
       let targetUser = existing
       if (!targetUser) {
         targetUser = {
           id: `usr-google-${Date.now().toString(36)}`,
-          name: 'Usuario Google',
+          name: 'Operador Ventas Demo',
           email: googleEmail,
-          phone: '900475318',
-          role: 'ADMIN',
+          phone: '',
+          role: 'OPERATOR',
           active: true,
           authProvider: 'google',
           avatarUrl: 'https://lh3.googleusercontent.com/a/default-user',
@@ -225,7 +243,10 @@ export function useAuthStore() {
   }, [])
 
   const deleteUser = useCallback((id: string) => {
-    if (id === 'usr-admin-01') return
+    // No permitir eliminar al admin principal
+    if (id === 'usr-admin-01' || id === memoryUsers.find((u) => u.email === 'tritechcesar@gmail.com')?.id) {
+      return
+    }
     memoryUsers = memoryUsers.filter((u) => u.id !== id)
     saveToLocalStorage()
     notify()

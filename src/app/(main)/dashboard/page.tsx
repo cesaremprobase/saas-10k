@@ -12,6 +12,7 @@ import { exportShalomExcel } from '@/features/export-shalom/services/shalom-exce
 import { OrderItem } from '@/features/orders/types'
 import { useAuthStore } from '@/features/auth/store/use-auth-store'
 import { TeamManagementModal } from '@/features/auth/components/TeamManagementModal'
+import { UserPhoneModal } from '@/features/auth/components/UserPhoneModal'
 
 export default function DashboardPage() {
   const { orders, sender, markAllAsLabeled, markAllAsExported } = useOrderStore()
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const [isSenderModalOpen, setIsSenderModalOpen] = useState(false)
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false)
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false)
+  const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false)
   const [selectedOrderForPrint, setSelectedOrderForPrint] = useState<OrderItem | null>(null)
   const [activeTab, setActiveTab] = useState<'all' | 'new_order'>('all')
   const [copiedLink, setCopiedLink] = useState(false)
@@ -95,16 +97,36 @@ export default function DashboardPage() {
 
           {/* User & Access Controls */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Solo ADMIN puede gestionar accesos globales del equipo */}
+            {currentUser?.role === 'ADMIN' && (
+              <button
+                onClick={() => setIsTeamModalOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-semibold transition-all"
+                title="Panel de Administrador: Gestionar usuarios y roles"
+              >
+                <span>👥</span>
+                <span>Equipo y Accesos</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-200 font-mono">
+                  ADMIN
+                </span>
+              </button>
+            )}
+
+            {/* Configurar / Cambiar Mi WhatsApp Personal */}
             <button
-              onClick={() => setIsTeamModalOpen(true)}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-semibold transition-all"
-              title="Gestionar accesos de equipo y links personales de WhatsApp"
+              onClick={() => setIsPhoneModalOpen(true)}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+                currentUser?.phone
+                  ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
+                  : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300 animate-pulse'
+              }`}
+              title="Configurar el WhatsApp donde recibirás los pedidos de tus clientes"
             >
-              <span>👥</span>
-              <span>Equipo y Accesos</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-200">
-                {currentUser?.role === 'ADMIN' ? 'ADMIN' : 'OPERADOR'}
+              <span>📲</span>
+              <span>
+                {currentUser?.phone ? `WhatsApp: +51 ${currentUser.phone}` : 'Configurar mi WhatsApp'}
               </span>
+              <span className="text-[10px] text-slate-400">&bull; Editar</span>
             </button>
 
             {/* Sender Profile Pill */}
@@ -134,6 +156,9 @@ export default function DashboardPage() {
               )}
               <span className="text-slate-200 text-xs font-medium truncate max-w-[110px]" title={currentUser?.name}>
                 {currentUser?.name?.split(' ')[0] || 'Usuario'}
+              </span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
+                {currentUser?.role === 'ADMIN' ? 'ADMIN' : 'OPERADOR'}
               </span>
               <button
                 type="button"
@@ -186,9 +211,24 @@ export default function DashboardPage() {
             <div className="flex items-center space-x-2">
               <span className="text-sm">🔗</span>
               <span className="font-bold text-white text-xs">Link de Despacho Público (Sin login para clientes):</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">
-                WhatsApp: +51 {activePhone}
-              </span>
+              {currentUser?.phone ? (
+                <button
+                  onClick={() => setIsPhoneModalOpen(true)}
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono hover:bg-emerald-500/30 transition-colors flex items-center space-x-1"
+                  title="Clic para cambiar tu número"
+                >
+                  <span>WhatsApp: +51 {currentUser.phone}</span>
+                  <span className="text-[9px] underline">cambiar</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsPhoneModalOpen(true)}
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold hover:bg-amber-500/30 transition-colors animate-pulse"
+                  title="Clic para configurar tu número personal"
+                >
+                  ⚠️ Clic aquí para asignar tu WhatsApp
+                </button>
+              )}
             </div>
             <p className="text-[11px] text-slate-400">
               Cualquier persona puede abrir este formulario sin cuenta. Al terminar, el pedido te llega directamente a tu WhatsApp personal.
@@ -206,13 +246,15 @@ export default function DashboardPage() {
               <span>{copiedLink ? '✓ ¡Link Copiado!' : '📋 Copiar Mi Link WhatsApp'}</span>
             </button>
 
-            <button
-              onClick={() => setIsTeamModalOpen(true)}
-              className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 text-xs font-semibold border border-purple-500/30 transition-colors flex items-center space-x-1"
-              title="Ver y copiar links de otros miembros del equipo"
-            >
-              <span>Links de Otros 👥</span>
-            </button>
+            {currentUser?.role === 'ADMIN' && (
+              <button
+                onClick={() => setIsTeamModalOpen(true)}
+                className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 text-xs font-semibold border border-purple-500/30 transition-colors flex items-center space-x-1"
+                title="Ver y copiar links de otros miembros del equipo"
+              >
+                <span>Links de Otros 👥</span>
+              </button>
+            )}
 
             <a
               href={relativeFormUrl}
@@ -326,6 +368,11 @@ export default function DashboardPage() {
       <TeamManagementModal
         isOpen={isTeamModalOpen}
         onClose={() => setIsTeamModalOpen(false)}
+      />
+
+      <UserPhoneModal
+        isOpen={isPhoneModalOpen}
+        onClose={() => setIsPhoneModalOpen(false)}
       />
     </div>
   )
