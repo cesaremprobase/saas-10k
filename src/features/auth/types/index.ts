@@ -7,6 +7,8 @@ export interface SystemUser {
   phone: string // Número WhatsApp personal (9 dígitos)
   role: UserRole
   active: boolean
+  avatarUrl?: string
+  authProvider?: 'google' | 'email'
   createdAt: string
 }
 
@@ -14,4 +16,3 @@ export interface LoginCredentials {
   email: string
   password?: string
 }
-

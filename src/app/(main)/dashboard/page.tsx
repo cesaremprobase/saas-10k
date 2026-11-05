@@ -122,17 +122,30 @@ export default function DashboardPage() {
 
             {/* User Session Pill */}
             <div className="flex items-center space-x-2 pl-2 border-l border-slate-800 text-xs">
-              <span className="text-slate-400 text-xs truncate max-w-[110px]" title={currentUser?.name}>
-                👤 {currentUser?.name?.split(' ')[0] || 'Admin'}
+              {currentUser?.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={currentUser.avatarUrl}
+                  alt={currentUser.name}
+                  className="w-5 h-5 rounded-full border border-slate-700"
+                />
+              ) : (
+                <span className="text-slate-400">👤</span>
+              )}
+              <span className="text-slate-200 text-xs font-medium truncate max-w-[110px]" title={currentUser?.name}>
+                {currentUser?.name?.split(' ')[0] || 'Usuario'}
               </span>
-              <Link
-                href="/login"
-                onClick={() => logout()}
+              <button
+                type="button"
+                onClick={() => {
+                  logout()
+                  window.location.href = '/login'
+                }}
                 className="text-[11px] text-slate-500 hover:text-rose-400 transition-colors"
-                title="Cerrar sesión o cambiar de usuario"
+                title="Cerrar sesión"
               >
                 Salir
-              </Link>
+              </button>
             </div>
           </div>
         </div>
